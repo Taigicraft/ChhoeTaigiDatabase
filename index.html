@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taigicraft 台語辭典</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .search-box {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #searchInput {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            font-size: 16px;
+        }
+        #searchButton {
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #searchButton:hover {
+            background-color: #2980b9;
+        }
+        #loadingMessage, #statusMessage {
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .results-area {
+            margin-top: 20px;
+        }
+        .result-item {
+            background-color: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .result-item h3 {
+            margin-top: 0;
+            color: #2980b9;
+        }
+        .result-item p {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+        .result-item strong {
+            color: #2c3e50;
+        }
+        .result-item .source {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #777;
+        }
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+         /* Dark mode toggle styles */
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 24px;
+            position: relative;
+            width: 50px;
+        }
+        .theme-switch input {
+            display:none;
+        }
+        .slider {
+            background-color: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+        }
+        .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 16px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 16px;
+        }
+        input:checked + .slider {
+            background-color: #3498db;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .slider.round {
+            border-radius: 34px;
+        }
+        .slider.round:before {
+            border-radius: 50%;
+        }
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+        body.dark-mode .container {
+            background-color: #34495e;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        body.dark-mode h1 {
+            color: #ecf0f1;
+        }
+        body.dark-mode #searchInput {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            border-color: #46637f;
+        }
+        body.dark-mode .result-item {
+            background-color: #4a6fa5; /* Slightly lighter than container for contrast */
+            border-color: #2c3e50;
+        }
+        body.dark-mode .result-item h3 {
+            color: #9acfea;
+        }
+        body.dark-mode .result-item strong {
+            color: #ecf0f1;
+        }
+        body.dark-mode .result-item .source {
+            color: #bdc3c7;
+            border-top-color: #46637f;
+        }
+        body.dark-mode .footer a {
+            color: #9acfea;
+        }
+        body.dark-mode #loadingMessage, body.dark-mode #statusMessage {
+             color: #bdc3c7;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch" for="checkbox">
+                <input type="checkbox" id="checkbox" />
+                <div class="slider round"></div>
+            </label>
+            <em> 黑暗模式</em>
+        </div>
+
+        <h1>Taigicraft 台語辭典</h1>
+        <p style="text-align:center; font-size:0.9em;">詞庫來源：<a href="https://github.com/Taigicraft/ChhoeTaigiDatabase" target="_blank">ChhoeTaigi 找台語資料庫</a></p>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="輸入台語、華語或英語關鍵字...">
+            <button id="searchButton">搜尋</button>
+        </div>
+        
+        <div id="loadingMessage">字典資料加載中，請稍候...</div>
+        <div id="statusMessage"></div>
+        <div id="resultsArea" class="results-area"></div>
+
+        <div class="footer">
+            <p>資料來自 <a href="https://github.com/Taigicraft/ChhoeTaigiDatabase" target="_blank">ChhoeTaigiDatabase on GitHub</a>.</p>
+            <p>請遵守各字典資料的授權規定。</p>
+        </div>
+    </div>
+
+    <script>
+        const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/Taigicraft/ChhoeTaigiDatabase/refs/heads/master/ChhoeTaigiDatabase/';
+        
+        const DICTIONARY_SOURCES = [
+            {
+                id: 'ChhoeTaigi_TaihoaSoanntengTuichiautian',
+                name: '#1: 2002+ 台華線頂對照典 (91339詞)',
+                fileName: 'ChhoeTaigi_TaihoaSoanntengTuichiautian.csv',
+                license: 'CC BY-SA 4.0 (姓名標示-Sio-kâng方式分享 4.0 國際)',
+                searchFields: ['PojUnicode', 'PojInput', 'HanLoTaibunPoj', 'KipUnicode', 'KipInput', 'HanLoTaibunKip', 'HoaBun'],
+                displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'} ${item.PojUnicodeOthers ? `(${item.PojUnicodeOthers})` : ''}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'} ${item.KipUnicodeOthers ? `(${item.KipUnicodeOthers})` : ''}</p>
+                    <p><strong>漢羅台文 (POJ):</strong> ${item.HanLoTaibunPoj || 'N/A'}</p>
+                    <p><strong>漢羅台文 (KIP):</strong> ${item.HanLoTaibunKip || 'N/A'}</p>
+                    <p><strong>對應華文:</strong> ${item.HoaBun || 'N/A'}</p>
+                `
+            },
+            {
+                id: 'ChhoeTaigi_TaijitToaSutian',
+                name: '#2: 1932 台日大辭典(台譯版) (69513詞)',
+                fileName: 'ChhoeTaigi_TaijitToaSutian.csv',
+                license: 'CC BY-NC-SA 3.0 TW (姓名標示-非商業性-Sio-kâng方式分享 3.0 台灣)',
+                searchFields: ['PojUnicode', 'PojInput', 'HanLoTaibunPoj', 'KaisoehHanLoPoj', 'LekuHanLoPoj', 'KipUnicode', 'KipInput', 'HanLoTaibunKip', 'KaisoehHanLoKip', 'LekuHanLoKip'],
+                displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'} ${item.PojUnicodeOthers ? `(${item.PojUnicodeOthers})` : ''}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'} ${item.KipUnicodeOthers ? `(${item.KipUnicodeOthers})` : ''}</p>
+                    <p><strong>漢羅台文 (POJ):</strong> ${item.HanLoTaibunPoj || 'N/A'}</p>
+                    <p><strong>漢羅台文解說 (POJ):</strong> ${item.KaisoehHanLoPoj || 'N/A'}</p>
+                    <p><strong>漢羅台文例句 (POJ):</strong> ${item.LekuHanLoPoj || 'N/A'}</p>
+                    <p><strong>頁數:</strong> ${item.PageNumber || 'N/A'}</p>
+                `
+            },
+            {
+                id: 'ChhoeTaigi_MaryknollTaiengSutian',
+                name: '#3: 1976 Maryknoll台英辭典 (55903詞)',
+                fileName: 'ChhoeTaigi_MaryknollTaiengSutian.csv',
+                license: 'CC BY-NC-SA 3.0 TW (姓名標示-非商業性-Sio-kâng方式分享 3.0 台灣)',
+                searchFields: ['PojUnicode', 'PojInput', 'KipUnicode', 'KipInput', 'HoaBun', 'EngBun'],
+                displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'}</p>
+                    <p><strong>對應華文:</strong> ${item.HoaBun || 'N/A'}</p>
+                    <p><strong>對應英文:</strong> ${item.EngBun || 'N/A'}</p>
+                `
+            },
+            {
+                id: 'ChhoeTaigi_EmbreeTaiengSutian',
+                name: '#4: 1973 Embree台英辭典 (36800詞)',
+                fileName: 'ChhoeTaigi_EmbreeTaiengSutian.csv',
+                license: 'CC BY-NC-SA 3.0 TW (姓名標示-非商業性-Sio-kâng方式分享 3.0 台灣)',
+                searchFields: ['PojUnicode', 'PojInput', 'KipUnicode', 'KipInput', 'HoaBun', 'EngBun', 'Synonym'],
+                displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'}</p>
+                    <p><strong>詞類縮寫:</strong> ${item.Abbreviation || 'N/A'}</p>
+                    <p><strong>單位量詞:</strong> ${item.NounClassifier || 'N/A'}</p>
+                    <p><strong>對應華文:</strong> ${item.HoaBun || 'N/A'}</p>
+                    <p><strong>對應英文:</strong> ${item.EngBun || 'N/A'}</p>
+                    <p><strong>Kāng義詞:</strong> ${item.Synonym || 'N/A'}</p>
+                    <p><strong>參照:</strong> ${item.Confer || 'N/A'}</p>
+                `
+            },
+            {
+                id: 'ChhoeTaigi_KauiokpooTaigiSutian',
+                name: '#5: 2011+ 教育部台語辭典 (24608詞)',
+                fileName: 'ChhoeTaigi_KauiokpooTaigiSutian.csv',
+                license: 'CC BY-ND 3.0 TW (姓名標示-禁止改作 3.0 台灣)',
+                searchFields: ['PojUnicode', 'PojInput', 'KipUnicode', 'KipInput', 'HanLoTaibunPoj', 'HoaBun', 'Synonym', 'Opposite'],
+                 displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'} ${item.PojUnicodeOthers ? `(${item.PojUnicodeOthers})` : ''}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'} ${item.KipUnicodeOthers ? `(${item.KipUnicodeOthers})` : ''}</p>
+                    <p><strong>漢字台文:</strong> ${item.HanLoTaibunPoj || 'N/A'} ${item.KipDictHanjiTaibunOthers ? `(${item.KipDictHanjiTaibunOthers})` : ''}</p>
+                    <p><strong>對應華文:</strong> ${item.HoaBun || 'N/A'}</p>
+                    <p><strong>華文解說/詞性 (POJ):</strong> ${item.KaisoehHanLoPoj || 'N/A'}</p>
+                    <p><strong>華文解說/詞性 (KIP):</strong> ${item.KaisoehHanLoKip || 'N/A'}</p>
+                    <p><strong>Kāng義詞:</strong> ${item.Synonym || 'N/A'}</p>
+                    <p><strong>反義詞:</strong> ${item.Opposite || 'N/A'}</p>
+                `
+            },
+            {
+                id: 'ChhoeTaigi_KamJitian',
+                name: '#6: 1913 甘字典 (24367詞)',
+                fileName: 'ChhoeTaigi_KamJitian.csv',
+                license: 'CC BY-NC-SA 3.0 TW (姓名標示-非商業性-Sio-kâng方式分享 3.0 台灣)',
+                searchFields: ['PojUnicode', 'PojInput', 'HanLoTaibunPoj', 'KaisoehPoj', 'KipUnicode', 'KipInput', 'KaisoehKip'],
+                displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'}</p>
+                    <p><strong>漢字台文:</strong> ${item.HanLoTaibunPoj || 'N/A'}</p>
+                    <p><strong>漢字文讀音 (POJ):</strong> ${item.HanbunImPojUnicode || 'N/A'}</p>
+                    <p><strong>台文解說 (POJ):</strong> ${item.KaisoehPoj || 'N/A'}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'}</p>
+                `
+            },
+            {
+                id: 'ChhoeTaigi_iTaigiHoataiTuichiautian',
+                name: '#7: 2016+ iTaigi華台對照典 (19046詞)',
+                fileName: 'ChhoeTaigi_iTaigiHoataiTuichiautian.csv',
+                license: 'CC0 (公眾領域貢獻宣告)',
+                searchFields: ['PojUnicode', 'PojInput', 'KipUnicode', 'KipInput', 'HanLoTaibunPoj', 'HanLoTaibunKip', 'HoaBun'],
+                displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'}</p>
+                    <p><strong>漢羅台文 (POJ):</strong> ${item.HanLoTaibunPoj || 'N/A'}</p>
+                    <p><strong>漢羅台文 (KIP):</strong> ${item.HanLoTaibunKip || 'N/A'}</p>
+                    <p><strong>對應華文:</strong> ${item.HoaBun || 'N/A'}</p>
+                    <p><strong>資料來源:</strong> ${item.DataProvidedBy || 'N/A'}</p>
+                `
+            },
+            {
+                id: 'ChhoeTaigi_TaioanPehoeKichhooGiku',
+                name: '#8: 1956 台灣白話基礎語句 (5429詞)',
+                fileName: 'ChhoeTaigi_TaioanPehoeKichhooGiku.csv',
+                license: 'CC BY-SA 4.0 (姓名標示-Sio-kâng方式分享 4.0 國際)',
+                searchFields: ['PojUnicode', 'PojInput', 'KipUnicode', 'KipInput', 'HoaBun', 'EngBun', 'LekuPoj', 'LekuEngbun', 'LekuHoabun'],
+                displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'} ${item.PojUnicodeOthers ? `(${item.PojUnicodeOthers})` : ''}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'} ${item.KipUnicodeOthers ? `(${item.KipUnicodeOthers})` : ''}</p>
+                    <p><strong>對應華文:</strong> ${item.HoaBun || 'N/A'}</p>
+                    <p><strong>對應英文:</strong> ${item.EngBun || 'N/A'}</p>
+                    <p><strong>例句 (POJ):</strong> ${item.LekuPoj || 'N/A'}</p>
+                    <p><strong>例句 (英文):</strong> ${item.LekuEngbun || 'N/A'}</p>
+                    <p><strong>例句 (華文):</strong> ${item.LekuHoabun || 'N/A'}</p>
+                `
+            },
+            {
+                id: 'ChhoeTaigi_TaioanSitbutMialui',
+                name: '#9: 1928 台灣植物名彙 (1722詞)',
+                fileName: 'ChhoeTaigi_TaioanSitbutMialui.csv',
+                license: 'CC BY-SA 4.0 (姓名標示-Sio-kâng方式分享 4.0 國際)',
+                searchFields: ['PojUnicode', 'PojInput', 'HanLoTaibunPoj', 'KaisoehHanLoPoj', 'KipUnicode', 'KipInput', 'HanLoTaibunKip', 'KaisoehHanLoKip'],
+                displayTemplate: (item) => `
+                    <p><strong>白話字 (POJ):</strong> ${item.PojUnicode || 'N/A'} ${item.PojUnicodeOthers ? `(${item.PojUnicodeOthers})` : ''}</p>
+                    <p><strong>漢羅台文 (POJ):</strong> ${item.HanLoTaibunPoj || 'N/A'}</p>
+                    <p><strong>漢羅台文解說 (POJ):</strong> ${item.KaisoehHanLoPoj || 'N/A'}</p>
+                    <p><strong>教育部羅馬拼音 (KIP):</strong> ${item.KipUnicode || 'N/A'} ${item.KipUnicodeOthers ? `(${item.KipUnicodeOthers})` : ''}</p>
+                `
+            }
+        ];
+
+        let ALL_DICTIONARY_DATA = [];
+
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsArea = document.getElementById('resultsArea');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const statusMessage = document.getElementById('statusMessage');
+        const themeToggle = document.getElementById('checkbox');
+
+
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) return []; // No data or only header
+            
+            const headers = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(value => value.trim().replace(/"/g, ''));
+                if (values.length === headers.length) {
+                    const entry = {};
+                    headers.forEach((header, index) => {
+                        entry[header] = values[index];
+                    });
+                    data.push(entry);
+                }
+            }
+            return data;
+        }
+
+        async function loadAllData() {
+            loadingMessage.textContent = `正在下載 ${DICTIONARY_SOURCES.length} 部辭庫... (0/${DICTIONARY_SOURCES.length})`;
+            let loadedCount = 0;
+            try {
+                for (const source of DICTIONARY_SOURCES) {
+                    const response = await fetch(GITHUB_BASE_URL + source.fileName);
+                    if (!response.ok) {
+                        console.error(`Failed to load ${source.fileName}: ${response.statusText}`);
+                        source.data = []; // Add empty data if fetch fails
+                        source.error = `無法下載 ${source.name}`;
+                    } else {
+                        const csvText = await response.text();
+                        source.data = parseCSV(csvText);
+                        source.error = null;
+                    }
+                    ALL_DICTIONARY_DATA.push(source); // Store the source object with its data
+                    loadedCount++;
+                    loadingMessage.textContent = `辭庫資料匯入中... (${loadedCount}/${DICTIONARY_SOURCES.length}) - ${source.name}`;
+                }
+                loadingMessage.textContent = '所有辭庫資料匯入完成！可以開始搜尋。';
+                searchInput.disabled = false;
+                searchButton.disabled = false;
+
+                let totalEntries = 0;
+                ALL_DICTIONARY_DATA.forEach(dict => totalEntries += (dict.data ? dict.data.length : 0));
+                statusMessage.textContent = `總共 ${ALL_DICTIONARY_DATA.length} 部辭庫，${totalEntries.toLocaleString()} 個詞條已匯入。`;
+
+
+            } catch (error) {
+                console.error('Error loading dictionary data:', error);
+                loadingMessage.textContent = '部分辭庫資料加載失敗，請檢查網路連線或控制台錯誤訊息。';
+                statusMessage.textContent = '加載過程發生錯誤。';
+            }
+        }
+        
+        function displayResults(results) {
+            resultsArea.innerHTML = '';
+            if (results.length === 0) {
+                resultsArea.innerHTML = '<p>查無結果。</p>';
+                return;
+            }
+
+            results.forEach(result => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'result-item';
+                
+                let mainTitle = result.item.PojUnicode || result.item.HanLoTaibunPoj || result.item.KipUnicode || result.item.HoaBun || '詞條';
+                itemDiv.innerHTML = `
+                    <h3>${mainTitle}</h3>
+                    ${result.source.displayTemplate(result.item)}
+                    <p class="source"><strong>來源:</strong> ${result.source.name} (${result.source.license})</p>
+                `;
+                resultsArea.appendChild(itemDiv);
+            });
+        }
+
+        function performSearch() {
+            const query = searchInput.value.trim().toLowerCase();
+            if (!query) {
+                resultsArea.innerHTML = '';
+                statusMessage.textContent = `總共 ${ALL_DICTIONARY_DATA.length} 部辭庫，約 ${ALL_DICTIONARY_DATA.reduce((sum, dict) => sum + (dict.data ? dict.data.length : 0), 0).toLocaleString()} 詞條已匯入。`;
+                return;
+            }
+
+            const matchedResults = [];
+            ALL_DICTIONARY_DATA.forEach(source => {
+                if (source.data && source.data.length > 0) {
+                    source.data.forEach(item => {
+                        let isMatch = false;
+                        for (const field of source.searchFields) {
+                            if (item[field] && item[field].toLowerCase().includes(query)) {
+                                isMatch = true;
+                                break;
+                            }
+                        }
+                        if (isMatch) {
+                            matchedResults.push({ item: item, source: source });
+                        }
+                    });
+                }
+            });
+            
+            displayResults(matchedResults);
+            statusMessage.textContent = `關鍵字 "${query}" 找到 ${matchedResults.length} 個結果。`;
+        }
+
+        // Dark Mode Toggle
+        function applyTheme(isDark) {
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        themeToggle.addEventListener('change', function() {
+            applyTheme(this.checked);
+        });
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            themeToggle.checked = true;
+            applyTheme(true);
+        } else {
+            applyTheme(false); // Default to light
+        }
+
+        // Event Listeners
+        searchButton.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // Initial load
+        searchInput.disabled = true;
+        searchButton.disabled = true;
+        loadAllData();
+
+    </script>
+</body>
+</html>
